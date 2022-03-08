@@ -2,7 +2,7 @@
 
 ## UKA 
 
-- materals from github, disc and older generations
+- source from github, disc and older generations
 
 ## OVO
 
