@@ -1,9 +1,9 @@
 # 6semester
 
-##UKA 
+## UKA 
 
 - materals from github, disc and older generations
 
-#OVO
+## OVO
 
 - source from github and older colleagues
