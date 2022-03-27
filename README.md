@@ -1,5 +1,3 @@
 # 6semester
 
-@author Spike433
-
-
+![Uploading wp2980509-chill-wallpaper-backgro.jpg…]()
