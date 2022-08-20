@@ -1,0 +1,32 @@
+1. Obnovio sam certifikat po novim uputama sa obavijesti i skinuo labos te pokrenuo imunes.
+
+2. Kada sam na PCu1 upisao telnet ip_adresa u wiresharku je bilo prikazana uspostava TCP konekcije (prvo SYN,ACK pa ACK)
+  i zatim je bilo vidljivo slanje podataka preko protokola TELNET. Tu i tamo se pojavio ACK od TCP-a i na kraju je završilo
+  sa (FIN,ACK) te ACK
+ 
+3. Otvaramo skriptu FW.sh i u nju dodajemo pravila. FW.sh skripta prati ovaj izvještaj po brojevima
+
+    3.1 Prvo sam zakomentirao ICMP pravila na početku jer je ping prolazio a koristio sam ga za testiranje.
+
+    3.2 Kako bih dao pristup iz Lan mreže u DMZ i Internet sam
+        3.2.1 kao dolazni port koristio eth1 (-i eth1)
+        3.2.2 dodao pravilo na kraj lanca za prosljeđivanje (-A FOWARD)
+        3.2.3 odlazni port (-o eth2, -o eth0)
+        3.2.4 privaćanje paketa (-j ACCEPT)
+    
+    Napomene : 1. u svim naredbama sam mogao pisati i -m state --state NEW ali je sve normalno radilo pa sam zanemario
+                2. u kasnijim naredbama su izostavljeni portovi ako već postoje IP adrese jer je onda jasno na što se odnosi
+   
+    
+    3.3 Iz interneta dozvoljen je pristup DMZ-u pomoću određenih protokola DNS i SSH
+        1. uz sve prethodno navedene naredbe potrebno je još dodati i portove odgovarajućih protokola (-p tcp --dport 22 ...)
+        2. dodajemo IP adresu odredišta (-d 203.0.113.10) ili DMZ servera
+    
+    3.4 Iz vanjske i DMZ u lokalnu je zabranjen, dozvoljen je pristup LANu sa servera DMZ pomoću SSH
+        1. koristimo kombinaciju prethodnih pravila i još dodajemo -j DROP kako bi odbacili taj paket
+        2. prethodnim pravilima omogućujemo prolaz paketa preko SSH protokola
+    
+    3.5 ponavljanje prethodnih naredbi
+    
+    3.6 SSH pristup firewallu dozvoljen je samo preko LANa
+        1. potrebno je staviti izvorišnu adresu (-s 10.0.0.1) gdje dodajemo ulazno pravilo (-A INPUT)
