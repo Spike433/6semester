@@ -1,0 +1,37 @@
+Ovo rješenje je rađeno u javi, sa verzijom JDK 17.0.1. - potrebna je instalacija JDK 17.0.1+ verzije, te se uzima pretpostavka da je posložen path na java executable za primjer dan dolje, inače je potrebno pokretati javu s direktnom putanjom.
+
+Rješenje radi na principu komandi kako je dano primjerom u zadatku laboratorijske vježbe te se pokreće na način da se otvori terminal, pozicionira se u folder sa datotekom "Main.java" (što je ujedno i izvorni kod) (src/com/fer/Main.java) te se pokreće sa komandom "java Main.java <args>" 
+
+Na početku je potrebno pokrenuti program sa argumentom "init" i dati mu master password, nakon čega program stvara 3 datoteke, te se dalje može koristiti sa komandama isto danim u tekstu zadatka laboratorijske vježbe.
+
+U SUSTAV NIJE IMPLEMENTIRANO OPORAVLJANJE OD POGREŠAKA UKOLIKO SE NE ZADAJU SVI POTREBNI ARGUMENTI DANI U PRIMJERU U TEKSTU ZADATKA LABORATORIJSKE VJEŽBE - ZATO JE POTREBNO ISPRAVNO KORISTITI ALAT KAKO JE DANO U PRIMJERU
+
+
+
+KAKO RADI SUSTAV:
+
+Nakon prvobitnog pokretanja programa sa "init" argumentom, program stvara 3 datoteke: "database.txt" - za kriptirano spremanje adresa i zaporki, "saltIV.bin" - za spremanje salt-a i početnog IV-a koji se koriste prilikom dekriptiranja, te "hmac.bin" - HMAC kriptiranog teksta u database.txt
+
+Pozivanjem init argumenta, uništavaju se svi prethodno spremljeni podaci. Tom komandom se ujedno 'postavlja' (ne sprema se nigdje, nego se podaci kriptiraju tim ključem) master password koji se kasnije može koristiti za kriptiranje i dekriptiranje u drugim komandama.
+
+Kasnije, svakim pozivanjem get ili put argumenta, sustav pomoću master passworda čita/dodaje (kriptirane) podatke u database.txt, a ukoliko se priloži krivi master password, ili se izmijeni samo jedan od bitova u hmac.bin, saltIV.bin, ili neki od znakova u database.txt, program će dojaviti "Master password incorrect or integrity check failed." grešku.
+
+database.txt šifrat sam napravio u .txt obliku sa BASE64 encodingom čisto iz razloga da mogu lako isprobati i vidjeti što se događa ako promijenim koje slovo/broj te pokušam dekriptirati i dohvatiti neki ključ, salt, IV i HMAC su spremljeni u bajtovima takvi kakvi jesu.
+
+
+KAKO SAM ZAŠTITIO ZAPORKE i ZADOVOLJAVANJE SIGURNOSNIH ZAHTJEVA:
+
+Povjerljivost zaporki je zadovoljena tako da se enkriptira cijela baza podataka (adresa + lozinka) pomoću AES256 CBC enkripcije. Duljina zaporki se ne može odrediti upravo iz razloga što se enkriptira cijela baza podataka, jer napadač ne zna koliko je lozinki spremljeno, te kolike su duljine tih lozinki u šifratu (jer je šifrat kombinacija adrese i lozinke). Napadač neće znati je li nova zaporka jednaka staroj, jer prilikom svakog novog dodavanja lozinke (ili mijenjanja neke stare), program generira novi slučajni salt i IV koji koristi za enkripciju.
+
+Povjerljivost adresa je zadovoljena jer isto kao ni o lozinkama, napadač ne može dobiti nikakve informacije o adresama jer su šifrirane, a ne zna čak niti koliko se različitih adresa nalazi u bazi, zbog istog razloga navedenog i prije - cijela baza se kriptira zajedno.
+
+Integritet adresa i zaporki je zadovoljena korištenjem HMAC-a. Prilikom svake enkripcije (pa makar se postavila ista lozinka za već postojeću adresu), mijenja se salt i IV - time se mijenja cijeli šifrat baze podataka, te se time mijenja i HMAC.
+
+
+ZA ONE KOJI ŽELE VIŠE:
+
+Iako nisam implementirao navedene zahtjeve (vrijeme leti...) ovdje ću opisati kratko kako bih ih riješio:
+
+1. Kako bi alat baratao s jako puno zaporki, vjerojatno bih napravio nešto poput kreiranja posebne datoteke za svaku zadanu adresu, te bi svaku od datoteka nazvao po "SHA256(adresa)" (znači SHA256 hash od adrese bi bilo ime datoteke), a nutra bih jednostavno opet spremio iste kriptirane podatke (adresa + password). Time bih zadovoljio sve dane uvjete, performanse bi bile puno bolje za velik broj spremljenih passwordi, no ovime bih dao informaciju o tome koliko je passworda spremljeno.
+
+2.Ovo je nešto problematičnije, vjerojatno bih kreirao neku skrivenu datoteku kojoj korisnik ne bi mogao pristupiti (mijenjati, brisati - ne bi imao dopuštenja od sustava za te akcije), nego bi joj mogao pristupiti samo program - u njoj bih brojao koliko puta je program modificirao bazu podataka (samo s mogućnošću pozitivnog inkrementiranja), a taj broj bi ujedno i pohranjivao i negdje u bazi podataka. Ukoliko ti brojevi ne bi bili isti, znači da je došlo do rollback napada.

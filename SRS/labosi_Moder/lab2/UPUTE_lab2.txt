@@ -1,0 +1,55 @@
+UPUTE ZA POKRETANJE:
+
+Ovo rješenje je rađeno u javi, sa verzijom JDK 17.0.1. - potrebna je instalacija JDK 17.0.1+ verzije, te se uzima pretpostavka da je posložen path na java executable za primjer dan dolje, inače je potrebno pokretati javu s direktnom putanjom.
+
+Rješenje radi na principu sličnih komandi kako je dano primjerom u zadatku laboratorijske vježbe. Potrebno je pozicionirati se s terminalom u folder projekta te izvršiti sljedeće 2 naredbe kako bi se kod kompajlirao:
+javac -cp src .\src\com\fer\Login.java
+javac -cp src .\src\com\fer\UserMgmt.java
+
+Iako su kompajlirane datoteke već u projektu, te su zapravo spremne za izvršavanje, nakon toga mogu se uočiti novostvorene .class datoteke u folderima koje su nastale prijašnjim naredbama.
+
+Za pokretanje željenog alata, terminal treba ostati pozicioniran u direktoriju projekta, te se koriste sljedeće naredbe sa istim argumentima kako je dano u laboratorijskoj vježbi:
+
+java -cp src .\src\com\fer\UserMgmt.java <ARGS>  -  za usermgmt alat
+java -cp src .\src\com\fer\Login.java <ARGS>  -  za Login alat
+
+npr. "java -cp src .\src\com\fer\UserMgmt.java add MyUsername1" dodaje korisnika MyUsername1 te traži da se za njega odabere password.
+
+
+
+KAKO RADI SUSTAV:
+
+Program za spremanje podataka koristi datoteku "database.txt". Struktura podataka izgleda ovako:
+<username> <scrypt_hash> <forced_change>
+<username_2> <scrypt_hash_2> <forced_change_2>...
+
+<forced_change_x> poprima vrijednosti 1 ili 0, što znači da korisnik pri sljedećem loginu treba ili ne treba promijeniti password.
+
+Prilikom svake izvršene naredbe, sustav pristupa toj datoteci, te čita i/ili mijenja podatke sukladno izvršenoj naredbi.
+
+UserMgmt: 
+Za argument add (+ username) sustav će provjeriti postoji li već taj username u datoteci, te ako ne postoji, traži se od administratora da upiše lozinku za njega od minimalno 8 znakova.
+Za argument passwd (+ username) sustav će provjeriti postoji li taj username u datoteci, te ako postoji, traži se od administratora da upiše novu lozinku za tog usera od minimalno 8 znakova.
+Za argument forcepass (+ username) sustav će provjeriti postoji li taj username u datoteci, te ako postoji će mu postaviti forced_change podatak na "1", što znači da sljedeći put kada se taj user uspješno logira, od njega će biti traženo da promijeni svoj password
+Za argument del (+ username) sustav će sustav će provjeriti postoji li taj username u datoteci, te ako postoji, jednostavno će ga obrisati u datoteci, zajedno s njegovom hashiranom lozinkom i forced_change podatkom.
+
+Login:
+Nakon danog argumenta koji označava username, sustav traži da se za njega upiše lozinka. Moguća su 3 pokušaja, nakon čega se program zaustavlja. Ako je korisnik krivo upisao username (ili neki username koji ne postoji), u sva 3 pokušaja će mu sustav vratiti "Username or password incorrect." iako je password možda upisao dobro.
+Ukoliko je za upisani username forced_change parametar 1, te se korisnik uspješno logirao, od korisnika će biti zatraženo da upiše novi password koji mora imati minimalno 8 znakova.
+
+
+
+KAKO SAM ZAŠTITIO ZAPORKE i ZADOVOLJAVANJE SIGURNOSNIH ZAHTJEVA:
+
+Sigurnost zaporki osigurana je tako da je minimalna duljina lozinke 8 znakova te se koristi kriptografska funkcija sažetka "SCrypt" sa parametrima N (work factor): 65536, r (memory cost parameter): 16, p (parallelization parameter): 1.
+
+Danas se ta kriptografska funkcija sažetka smatra kao jednom od najsigurnijih, te se koristi za razne kriptovalute. Odabirom ovih parametara, broj iteracija za izračun sažetka i 'memory cost' su (i više nego) dovoljno veliki da čak i sa iznimno velikom količinom računalnih resursa, vremenski je ne isplativo ikakvo pogađanje lozinki, pogotovo brute-force napadom.
+
+Iako čista java u sebi ne sadrži SCrypt biblioteke, iskoristio sam jednu poznatu open-source biblioteku, čiji se izvorni kod i dokumentacija mogu naći na sljedećim stranicama:
+https://github.com/wg/scrypt
+https://www.javadoc.io/doc/com.lambdaworks/scrypt/latest/com/lambdaworks/crypto/SCryptUtil.html
+
+Iako je to jasno iz dokumentacije, možda bi i ovdje bilo dobro napomenuti da se za derivaciju ključa koristi PBKDF2-HmacSHA256, te svaki put kada se mijenja password koristi se drugi nasumično generirani (128-bitni) salt.
+
+Naravno na ovu listu možemo dodati i zaštitu On-line pogađanja, što je implementirano maksimalnim brojem pokušaja logiranja prije nego se program ugasi (u realnom svijetu bi se IP blokirao na neko vrijeme, ili nešto slično), te sigurnost prilikom unosa, tj. lozinka se ne vidi dok ju korisnik (pa ni administrator) upisuje.
+
